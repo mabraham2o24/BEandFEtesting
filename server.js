@@ -188,7 +188,6 @@ app.get("/weather", ensureAuthed, (req, res) => {
   res.render("weather", { user: req.user });
 });
 
-
 app.get("/logout", (req, res, next) => {
   req.logout((err) => {
     if (err) return next(err);
@@ -254,21 +253,27 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
 
-(async () => {
-  try {
-    if (!MONGO_URI) {
-      throw new Error("Missing MONGO_URI or MONGODB_URI in .env");
+// 🔹 Export app so Supertest/Jest can import it
+export default app;
+
+// 🔹 Only connect to MongoDB + listen when NOT running tests
+if (process.env.NODE_ENV !== "test") {
+  (async () => {
+    try {
+      if (!MONGO_URI) {
+        throw new Error("Missing MONGO_URI or MONGODB_URI in .env");
+      }
+
+      await mongoose.connect(MONGO_URI);
+      console.log("✅ Connected to MongoDB");
+
+      app.listen(PORT, () => {
+        console.log(`✅ Server running on http://localhost:${PORT}`);
+        console.log(`📚 Swagger docs at http://localhost:${PORT}/docs`);
+      });
+    } catch (err) {
+      console.error("❌ Failed to start server:", err);
+      process.exit(1);
     }
-
-    await mongoose.connect(MONGO_URI);
-    console.log("✅ Connected to MongoDB");
-
-    app.listen(PORT, () => {
-      console.log(`✅ Server running on http://localhost:${PORT}`);
-      console.log(`📚 Swagger docs at http://localhost:${PORT}/docs`);
-    });
-  } catch (err) {
-    console.error("❌ Failed to start server:", err);
-    process.exit(1);
-  }
-})();
+  })();
+}
